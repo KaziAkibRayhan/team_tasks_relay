@@ -21,6 +21,9 @@ export const metadata: Metadata = {
   description:
     'A focused team task system that surfaces urgent, overdue, and unassigned work.',
   applicationName: 'Relay',
+  icons: {
+    icon: '/favicon.svg',
+  },
   openGraph: {
     title: 'Relay — Team work, clearly owned',
     description:
