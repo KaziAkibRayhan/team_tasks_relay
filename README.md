@@ -2,6 +2,8 @@
 
 Relay is a focused team work list for answering three questions quickly: **what is active, what needs attention, and who owns it?** It deliberately optimizes for scanning, finding, and moving work rather than trying to be a full project-management suite.
 
+**Hosted preview (project access required):** [relay-task-workspace-2026.swop-id.chatgpt.site](https://relay-task-workspace-2026.swop-id.chatgpt.site)
+
 ## Screenshots
 
 The same default Active view is shown at the three assessment widths.
