@@ -127,36 +127,43 @@ const descriptions = [
   'Share the final outcome with the people affected by the change.',
 ];
 
-function localDateAtNoon(date = new Date()) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
+function utcDateAtNoon(date = new Date()) {
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      12,
+    ),
+  );
 }
 
 function addDays(date: Date, days: number) {
   const next = new Date(date);
-  next.setDate(next.getDate() + days);
+  next.setUTCDate(next.getUTCDate() + days);
   return next;
 }
 
 export function toDateOnly(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
 export function parseDateOnly(value: string) {
   const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, month - 1, day, 12);
+  return new Date(Date.UTC(year, month - 1, day, 12));
 }
 
 export function dayDifference(value: string, from = new Date()) {
   const target = parseDateOnly(value).getTime();
-  const base = localDateAtNoon(from).getTime();
+  const base = utcDateAtNoon(from).getTime();
   return Math.round((target - base) / 86_400_000);
 }
 
 export function generateTasks(count = 320): Task[] {
-  const today = localDateAtNoon();
+  const today = utcDateAtNoon();
 
   return Array.from({ length: count }, (_, index) => {
     const title =

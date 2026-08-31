@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type SyntheticEvent } from 'react';
 import { AlertTriangle, CalendarDays, UserRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   NativeSelect,
   NativeSelectOption,
@@ -53,17 +52,9 @@ export function AddTaskDialog({
   const [titleError, setTitleError] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!open) {
-      setTitle('');
-      setOwnerId('unassigned');
-      setDueDate('');
-      setUrgent(false);
-      setTitleError('');
-    }
-  }, [open]);
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(
+    event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
+  ) {
     event.preventDefault();
     const cleanTitle = title.trim();
 
@@ -96,7 +87,7 @@ export function AddTaskDialog({
         <form onSubmit={handleSubmit}>
           <div className="dialog-form-grid">
             <div className="form-field form-field-full">
-              <Label htmlFor="new-task-title">Task title</Label>
+              <label data-slot="label" htmlFor="new-task-title">Task title</label>
               <Input
                 ref={titleRef}
                 id="new-task-title"
@@ -108,7 +99,6 @@ export function AddTaskDialog({
                 placeholder="What needs to happen?"
                 aria-invalid={Boolean(titleError)}
                 aria-describedby={titleError ? 'new-task-title-error' : undefined}
-                autoFocus
               />
               {titleError ? (
                 <p id="new-task-title-error" className="field-error">
@@ -118,9 +108,9 @@ export function AddTaskDialog({
             </div>
 
             <div className="form-field">
-              <Label htmlFor="new-task-owner">
+              <label data-slot="label" htmlFor="new-task-owner">
                 <UserRound /> Owner
-              </Label>
+              </label>
               <NativeSelect
                 id="new-task-owner"
                 value={ownerId}
@@ -136,9 +126,9 @@ export function AddTaskDialog({
             </div>
 
             <div className="form-field">
-              <Label htmlFor="new-task-due">
+              <label data-slot="label" htmlFor="new-task-due">
                 <CalendarDays /> Due date
-              </Label>
+              </label>
               <Input
                 id="new-task-due"
                 type="date"
@@ -147,13 +137,17 @@ export function AddTaskDialog({
               />
             </div>
 
-            <label className="urgent-toggle form-field-full">
+            <label
+              className="urgent-toggle form-field-full"
+              htmlFor="new-task-urgent"
+            >
               <span className="urgent-toggle-icon"><AlertTriangle /></span>
               <span>
                 <strong>Mark as urgent</strong>
                 <small>Surface this task above the normal queue.</small>
               </span>
               <Checkbox
+                id="new-task-urgent"
                 checked={urgent}
                 onCheckedChange={(checked) => setUrgent(checked === true)}
                 aria-label="Mark task as urgent"
@@ -179,7 +173,7 @@ export function AddTaskDialog({
 }
 
 type TaskDetailDialogProps = {
-  task: Task | null;
+  task: Task;
   onClose: () => void;
   onSave: (task: Task) => void;
 };
@@ -189,29 +183,19 @@ export function TaskDetailDialog({
   onClose,
   onSave,
 }: TaskDetailDialogProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<TaskStatus>('todo');
-  const [ownerId, setOwnerId] = useState('unassigned');
-  const [dueDate, setDueDate] = useState('');
-  const [urgent, setUrgent] = useState(false);
+  const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description ?? '');
+  const [status, setStatus] = useState<TaskStatus>(task.status);
+  const [ownerId, setOwnerId] = useState(task.ownerId ?? 'unassigned');
+  const [dueDate, setDueDate] = useState(task.dueDate ?? '');
+  const [urgent, setUrgent] = useState(task.urgent);
   const [titleError, setTitleError] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!task) return;
-    setTitle(task.title);
-    setDescription(task.description ?? '');
-    setStatus(task.status);
-    setOwnerId(task.ownerId ?? 'unassigned');
-    setDueDate(task.dueDate ?? '');
-    setUrgent(task.urgent);
-    setTitleError('');
-  }, [task]);
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(
+    event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
+  ) {
     event.preventDefault();
-    if (!task) return;
 
     const cleanTitle = title.trim();
     if (!cleanTitle) {
@@ -234,7 +218,7 @@ export function TaskDetailDialog({
 
   return (
     <Dialog
-      open={Boolean(task)}
+      open
       onOpenChange={(nextOpen) => {
         if (!nextOpen) onClose();
       }}
@@ -253,7 +237,7 @@ export function TaskDetailDialog({
             <form onSubmit={handleSubmit}>
               <div className="dialog-form-grid detail-form-grid">
                 <div className="form-field form-field-full">
-                  <Label htmlFor="detail-task-title">Task title</Label>
+                  <label data-slot="label" htmlFor="detail-task-title">Task title</label>
                   <Input
                     ref={titleRef}
                     id="detail-task-title"
@@ -273,7 +257,7 @@ export function TaskDetailDialog({
                 </div>
 
                 <div className="form-field form-field-full">
-                  <Label htmlFor="detail-task-description">Description</Label>
+                  <label data-slot="label" htmlFor="detail-task-description">Description</label>
                   <Textarea
                     id="detail-task-description"
                     value={description}
@@ -284,7 +268,7 @@ export function TaskDetailDialog({
                 </div>
 
                 <div className="form-field">
-                  <Label htmlFor="detail-task-status">Stage</Label>
+                  <label data-slot="label" htmlFor="detail-task-status">Stage</label>
                   <NativeSelect
                     id="detail-task-status"
                     value={status}
@@ -301,7 +285,7 @@ export function TaskDetailDialog({
                 </div>
 
                 <div className="form-field">
-                  <Label htmlFor="detail-task-owner">Owner</Label>
+                  <label data-slot="label" htmlFor="detail-task-owner">Owner</label>
                   <NativeSelect
                     id="detail-task-owner"
                     value={ownerId}
@@ -317,7 +301,7 @@ export function TaskDetailDialog({
                 </div>
 
                 <div className="form-field form-field-full">
-                  <Label htmlFor="detail-task-due">Due date</Label>
+                  <label data-slot="label" htmlFor="detail-task-due">Due date</label>
                   <Input
                     id="detail-task-due"
                     type="date"
@@ -326,13 +310,17 @@ export function TaskDetailDialog({
                   />
                 </div>
 
-                <label className="urgent-toggle form-field-full">
+                <label
+                  className="urgent-toggle form-field-full"
+                  htmlFor="detail-task-urgent"
+                >
                   <span className="urgent-toggle-icon"><AlertTriangle /></span>
                   <span>
                     <strong>Urgent</strong>
                     <small>Move this above the team’s normal queue.</small>
                   </span>
                   <Checkbox
+                    id="detail-task-urgent"
                     checked={urgent}
                     onCheckedChange={(checked) => setUrgent(checked === true)}
                     aria-label="Mark task as urgent"

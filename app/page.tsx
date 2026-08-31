@@ -32,6 +32,7 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from '@/components/ui/native-select';
+import { useUrlQueryState } from '@/hooks/use-url-query-state';
 import {
   generateTasks,
   isOverdue,
@@ -43,14 +44,12 @@ import {
 import {
   DEFAULT_QUERY,
   filterAndSortTasks,
-  serializeQuery,
-  parseQuery,
   type AttentionFilter,
-  type QueryState,
   type SortOption,
 } from '@/lib/task-query';
 
 const PAGE_SIZE = 20;
+const EMPTY_TASKS: Task[] = [];
 
 const statusFilterLabels = {
   active: 'Active',
@@ -81,6 +80,7 @@ function todayHeading() {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
+    timeZone: 'UTC',
   }).format(new Date());
 }
 
@@ -91,60 +91,16 @@ type ToastMessage = {
 
 export default function Home() {
   const [tasks, setTasks] = useState(() => generateTasks());
-  const [query, setQuery] = useState<QueryState>(DEFAULT_QUERY);
-  const [searchDraft, setSearchDraft] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const queryRef = useRef(query);
-
-  const commitQuery = useCallback(
-    (next: QueryState, mode: 'push' | 'replace' = 'push') => {
-      queryRef.current = next;
-      setQuery(next);
-
-      const nextUrl = `${window.location.pathname}${serializeQuery(next)}${window.location.hash}`;
-      if (mode === 'replace') {
-        window.history.replaceState(null, '', nextUrl);
-      } else {
-        window.history.pushState(null, '', nextUrl);
-      }
-    },
-    [],
-  );
+  const { query, commitQuery, ready: queryReady } = useUrlQueryState();
 
   const showToast = useCallback((message: string) => {
     setToast({ id: Date.now(), message });
   }, []);
-
-  useEffect(() => {
-    function readLocation() {
-      const next = parseQuery(window.location.search);
-      queryRef.current = next;
-      setQuery(next);
-      setSearchDraft(next.q);
-
-      const canonical = serializeQuery(next);
-      if (canonical !== window.location.search) {
-        window.history.replaceState(
-          null,
-          '',
-          `${window.location.pathname}${canonical}${window.location.hash}`,
-        );
-      }
-    }
-
-    readLocation();
-    window.addEventListener('popstate', readLocation);
-    return () => window.removeEventListener('popstate', readLocation);
-  }, []);
-
-  useEffect(() => {
-    queryRef.current = query;
-  }, [query]);
 
   useEffect(() => {
     if (!toast) return;
@@ -171,7 +127,8 @@ export default function Home() {
     return () => document.removeEventListener('keydown', focusSearch);
   }, []);
 
-  const sourceTasks = query.demo === 'empty' ? [] : tasks;
+  const displayedDemo = queryReady ? query.demo : 'loading';
+  const sourceTasks = displayedDemo === 'empty' ? EMPTY_TASKS : tasks;
   const filteredTasks = useMemo(
     () => filterAndSortTasks(sourceTasks, query),
     [sourceTasks, query],
@@ -184,12 +141,12 @@ export default function Home() {
   const endIndex = Math.min(startIndex + PAGE_SIZE, total);
 
   useEffect(() => {
-    if (query.page !== currentPage) {
+    if (queryReady && query.page !== currentPage) {
       commitQuery({ ...query, page: currentPage }, 'replace');
     }
-  }, [commitQuery, currentPage, query]);
+  }, [commitQuery, currentPage, query, queryReady]);
 
-  const attentionSource = query.demo === 'empty' ? [] : tasks;
+  const attentionSource = displayedDemo === 'empty' ? [] : tasks;
   const activeTasks = attentionSource.filter((task) => task.status !== 'done');
   const attentionCounts = {
     urgent: activeTasks.filter((task) => task.urgent).length,
@@ -211,50 +168,24 @@ export default function Home() {
   const selectedTask =
     tasks.find((task) => task.id === selectedTaskId) ?? null;
 
-  function scheduleSearch(value: string) {
-    setSearchDraft(value);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => {
-      commitQuery(
-        { ...queryRef.current, q: value, page: 1 },
-        'replace',
-      );
-    }, 280);
-  }
-
-  function flushSearch(value = searchDraft) {
-    if (searchTimer.current) {
-      clearTimeout(searchTimer.current);
-      searchTimer.current = null;
-    }
-    if (value !== queryRef.current.q) {
-      commitQuery(
-        { ...queryRef.current, q: value, page: 1 },
-        'replace',
-      );
-    }
-  }
-
   function clearFilters(keepSearch = true) {
     const next = {
-      ...queryRef.current,
-      q: keepSearch ? queryRef.current.q : '',
+      ...query,
+      q: keepSearch ? query.q : '',
       status: DEFAULT_QUERY.status,
       owner: DEFAULT_QUERY.owner,
       attention: DEFAULT_QUERY.attention,
       sort: DEFAULT_QUERY.sort,
       page: 1,
     };
-    if (!keepSearch) setSearchDraft('');
     commitQuery(next, 'push');
   }
 
   function setAttention(attention: AttentionFilter) {
-    flushSearch();
     const nextAttention =
-      queryRef.current.attention === attention ? 'all' : attention;
+      query.attention === attention ? 'all' : attention;
     commitQuery(
-      { ...queryRef.current, attention: nextAttention, page: 1 },
+      { ...query, attention: nextAttention, page: 1 },
       'push',
     );
   }
@@ -271,7 +202,7 @@ export default function Home() {
     );
 
     const remainsVisible =
-      filterAndSortTasks([updatedTask], queryRef.current).length > 0;
+      filterAndSortTasks([updatedTask], query).length > 0;
     showToast(
       remainsVisible
         ? `${task.id} moved to ${STATUS_LABELS[status]}.`
@@ -300,14 +231,14 @@ export default function Home() {
 
     setTasks((current) => [newTask, ...current]);
 
-    if (queryRef.current.demo !== 'normal') {
-      commitQuery({ ...queryRef.current, demo: 'normal', page: 1 }, 'replace');
+    if (query.demo !== 'normal') {
+      commitQuery({ ...query, demo: 'normal', page: 1 }, 'replace');
       showToast(`${newTask.id} added to To do.`);
       return;
     }
 
     const appearsInView =
-      filterAndSortTasks([newTask], queryRef.current).length > 0;
+      filterAndSortTasks([newTask], query).length > 0;
     showToast(
       appearsInView
         ? `${newTask.id} added to To do.`
@@ -321,7 +252,7 @@ export default function Home() {
     );
     setSelectedTaskId(null);
     const remainsVisible =
-      filterAndSortTasks([updatedTask], queryRef.current).length > 0;
+      filterAndSortTasks([updatedTask], query).length > 0;
     showToast(
       remainsVisible
         ? `${updatedTask.id} updated.`
@@ -330,7 +261,6 @@ export default function Home() {
   }
 
   async function shareView() {
-    flushSearch();
     try {
       await navigator.clipboard.writeText(window.location.href);
       showToast('View link copied. Anyone opening it will see these same filters.');
@@ -428,39 +358,45 @@ export default function Home() {
         <section className="task-surface" aria-labelledby="tasks-title">
           <div className="surface-toolbar">
             <div className="surface-title">
-              <h2 id="tasks-title">{statusFilterLabels[query.status]} tasks</h2>
+              <h2 id="tasks-title" tabIndex={-1}>
+                {statusFilterLabels[query.status]} tasks
+              </h2>
               <p aria-live="polite">
-                {query.demo === 'loading'
+                {displayedDemo === 'loading'
                   ? 'Loading tasks…'
                   : `${total} task${total === 1 ? '' : 's'} · sorted by ${query.sort === 'attention' ? 'attention' : query.sort === 'due' ? 'due date' : 'recent update'}`}
               </p>
             </div>
             <div className="toolbar-controls">
-              <label className="search-field">
+              <div className="search-field">
                 <Search aria-hidden="true" />
-                <span className="sr-only">Search tasks, owners, or IDs</span>
+                <label className="sr-only" htmlFor="task-search">
+                  Search tasks, owners, or IDs
+                </label>
                 <Input
                   ref={searchRef}
-                  value={searchDraft}
-                  onChange={(event) => scheduleSearch(event.target.value)}
-                  onBlur={() => flushSearch()}
+                  id="task-search"
+                  value={query.q}
+                  onChange={(event) =>
+                    commitQuery(
+                      { ...query, q: event.target.value, page: 1 },
+                      'replace',
+                    )
+                  }
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter') flushSearch();
                     if (event.key === 'Escape') {
-                      scheduleSearch('');
-                      flushSearch('');
+                      commitQuery({ ...query, q: '', page: 1 }, 'replace');
                     }
                   }}
                   placeholder="Search tasks or owners"
                 />
-                {searchDraft ? (
+                {query.q ? (
                   <button
                     className="search-clear"
                     type="button"
                     aria-label="Clear search"
                     onClick={() => {
-                      scheduleSearch('');
-                      flushSearch('');
+                      commitQuery({ ...query, q: '', page: 1 }, 'replace');
                       searchRef.current?.focus();
                     }}
                   >
@@ -469,15 +405,12 @@ export default function Home() {
                 ) : (
                   <kbd>/</kbd>
                 )}
-              </label>
+              </div>
               <Button
                 className="filter-button"
                 variant="outline"
                 size="lg"
-                onClick={() => {
-                  flushSearch();
-                  setFilterOpen(true);
-                }}
+                onClick={() => setFilterOpen(true)}
               >
                 <Filter data-icon="inline-start" />
                 Filter
@@ -490,10 +423,9 @@ export default function Home() {
                 aria-label="Sort tasks"
                 value={query.sort}
                 onChange={(event) => {
-                  flushSearch();
                   commitQuery(
                     {
-                      ...queryRef.current,
+                      ...query,
                       sort: event.target.value as SortOption,
                       page: 1,
                     },
@@ -585,20 +517,20 @@ export default function Home() {
             pageCount={pageCount}
             startIndex={startIndex}
             endIndex={endIndex}
-            demo={query.demo}
+            demo={displayedDemo}
             isFiltered={hasFiltering}
             onOpenTask={(task) => setSelectedTaskId(task.id)}
             onStatusChange={handleStatusChange}
             onPrevious={() =>
               commitQuery(
-                { ...queryRef.current, page: Math.max(1, currentPage - 1) },
+                { ...query, page: Math.max(1, currentPage - 1) },
                 'push',
               )
             }
             onNext={() =>
               commitQuery(
                 {
-                  ...queryRef.current,
+                  ...query,
                   page: Math.min(pageCount, currentPage + 1),
                 },
                 'push',
@@ -606,7 +538,7 @@ export default function Home() {
             }
             onRetry={() =>
               commitQuery(
-                { ...queryRef.current, demo: 'normal' },
+                { ...query, demo: 'normal' },
                 'replace',
               )
             }
@@ -616,34 +548,41 @@ export default function Home() {
         </section>
       </main>
 
-      <FilterSheet
-        open={filterOpen}
-        onOpenChange={setFilterOpen}
-        query={query}
-        onApply={(next) => commitQuery(next, 'push')}
-        onClear={() => clearFilters(true)}
-      />
+      {filterOpen ? (
+        <FilterSheet
+          open
+          onOpenChange={setFilterOpen}
+          query={query}
+          onApply={(next) => commitQuery(next, 'push')}
+          onClear={() => clearFilters(true)}
+        />
+      ) : null}
 
-      <AddTaskDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        onAdd={handleAdd}
-      />
+      {addOpen ? (
+        <AddTaskDialog
+          open
+          onOpenChange={setAddOpen}
+          onAdd={handleAdd}
+        />
+      ) : null}
 
-      <TaskDetailDialog
-        task={selectedTask}
-        onClose={() => setSelectedTaskId(null)}
-        onSave={handleSave}
-      />
+      {selectedTask ? (
+        <TaskDetailDialog
+          key={selectedTask.id}
+          task={selectedTask}
+          onClose={() => setSelectedTaskId(null)}
+          onSave={handleSave}
+        />
+      ) : null}
 
       {toast ? (
-        <div className="toast" role="status" aria-live="polite" key={toast.id}>
+        <output className="toast" aria-live="polite" key={toast.id}>
           <span><Check /></span>
           <p>{toast.message}</p>
           <button type="button" aria-label="Dismiss message" onClick={() => setToast(null)}>
             <X />
           </button>
-        </div>
+        </output>
       ) : null}
     </div>
   );

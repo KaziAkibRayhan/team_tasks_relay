@@ -51,7 +51,8 @@ function formatDue(task: Task) {
   const formatted = new Intl.DateTimeFormat('en', {
     month: 'short',
     day: 'numeric',
-    ...(date.getFullYear() !== new Date().getFullYear()
+    timeZone: 'UTC',
+    ...(date.getUTCFullYear() !== new Date().getUTCFullYear()
       ? { year: 'numeric' }
       : {}),
   }).format(date);
@@ -80,7 +81,7 @@ function TaskRow({
   const due = formatDue(task);
 
   return (
-    <article className="task-row" role="listitem">
+    <li className="task-row">
       <div className="task-title-cell">
         <span
           className={`task-signal ${task.urgent ? 'is-urgent' : ''}`}
@@ -109,9 +110,28 @@ function TaskRow({
           size="sm"
           value={task.status}
           aria-label={`Move ${task.id} to another stage`}
-          onChange={(event) =>
-            onStatusChange(task, event.target.value as TaskStatus)
-          }
+          onChange={(event) => {
+            const control = event.currentTarget;
+            const row = control.closest('li');
+            const siblingRows = row?.parentElement
+              ? Array.from(row.parentElement.children)
+              : [];
+            const rowIndex = row ? siblingRows.indexOf(row) : -1;
+            const fallbackRow =
+              siblingRows[rowIndex + 1] ?? siblingRows[rowIndex - 1];
+            const fallbackControl = fallbackRow?.querySelector('select');
+
+            onStatusChange(task, event.target.value as TaskStatus);
+            window.requestAnimationFrame(() => {
+              if (!document.contains(control)) {
+                if (fallbackControl && document.contains(fallbackControl)) {
+                  fallbackControl.focus();
+                } else {
+                  document.getElementById('tasks-title')?.focus();
+                }
+              }
+            });
+          }}
         >
           {STATUSES.map((value) => (
             <NativeSelectOption key={value} value={value}>
@@ -136,7 +156,7 @@ function TaskRow({
         <CalendarDays aria-hidden="true" />
         <span>{due.label}</span>
       </div>
-    </article>
+    </li>
   );
 }
 
@@ -163,7 +183,7 @@ function LoadingRows() {
           <Skeleton className="skeleton-due" />
         </div>
       ))}
-      <span className="sr-only" role="status">Loading team work…</span>
+      <output className="sr-only">Loading team work…</output>
     </div>
   );
 }
@@ -259,21 +279,23 @@ export function TaskList({
 
   return (
     <>
-      <div className="task-list" role="list" aria-label="Team tasks">
+      <div className="task-list">
         <div className="task-list-head" aria-hidden="true">
           <span>Task</span>
           <span>Stage</span>
           <span>Owner</span>
           <span>Due</span>
         </div>
-        {tasks.map((task) => (
-          <TaskRow
-            key={task.id}
-            task={task}
-            onOpenTask={onOpenTask}
-            onStatusChange={onStatusChange}
-          />
-        ))}
+        <ul className="task-list-items" aria-label="Team tasks">
+          {tasks.map((task) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              onOpenTask={onOpenTask}
+              onStatusChange={onStatusChange}
+            />
+          ))}
+        </ul>
       </div>
 
       <nav className="surface-footer" aria-label="Task pages">

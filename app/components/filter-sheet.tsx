@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -63,10 +63,6 @@ export function FilterSheet({
   const isMobile = useIsMobile();
   const [draft, setDraft] = useState(query);
 
-  useEffect(() => {
-    if (open) setDraft(query);
-  }, [open, query]);
-
   function updateDraft<K extends keyof QueryState>(
     key: K,
     value: QueryState[K],
@@ -109,9 +105,10 @@ export function FilterSheet({
             </div>
           </fieldset>
 
-          <label className="filter-field">
-            <span>Owner</span>
+          <div className="filter-field">
+            <label htmlFor="filter-owner"><span>Owner</span></label>
             <NativeSelect
+              id="filter-owner"
               value={draft.owner}
               onChange={(event) => updateDraft('owner', event.target.value)}
             >
@@ -123,18 +120,23 @@ export function FilterSheet({
                 </NativeSelectOption>
               ))}
             </NativeSelect>
-          </label>
+          </div>
 
           <fieldset className="filter-group">
             <legend>Needs attention</legend>
             <div className="choice-list">
               {attentionOptions.map((option) => (
-                <label key={option.value}>
+                <label
+                  key={option.value}
+                  htmlFor={`attention-${option.value}`}
+                  aria-label={option.label}
+                >
                   <span>
                     <strong>{option.label}</strong>
                     <small>{option.description}</small>
                   </span>
                   <input
+                    id={`attention-${option.value}`}
                     type="radio"
                     name="attention"
                     value={option.value}
@@ -146,9 +148,10 @@ export function FilterSheet({
             </div>
           </fieldset>
 
-          <label className="filter-field filter-sort-field">
-            <span>Sort by</span>
+          <div className="filter-field filter-sort-field">
+            <label htmlFor="filter-sort"><span>Sort by</span></label>
             <NativeSelect
+              id="filter-sort"
               value={draft.sort}
               onChange={(event) =>
                 updateDraft('sort', event.target.value as SortOption)
@@ -158,7 +161,7 @@ export function FilterSheet({
               <NativeSelectOption value="due">Due date</NativeSelectOption>
               <NativeSelectOption value="updated">Recently updated</NativeSelectOption>
             </NativeSelect>
-          </label>
+          </div>
         </div>
 
         <SheetFooter className="filter-sheet-footer">
