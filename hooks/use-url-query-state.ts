@@ -57,6 +57,7 @@ export function useUrlQueryState() {
       } else {
         window.history.pushState(null, '', nextUrl);
       }
+      // History mutations do not emit popstate in the same tab.
       window.dispatchEvent(new Event(URL_CHANGE_EVENT));
       return true;
     },

@@ -9,6 +9,7 @@ import {
 } from 'react';
 import {
   AlertTriangle,
+  ArrowRight,
   CalendarDays,
   Check,
   Filter,
@@ -299,60 +300,87 @@ export default function Home() {
         <section className="page-heading" aria-labelledby="work-title">
           <div>
             <p className="eyebrow">{todayHeading()}</p>
-            <h1 id="work-title">Team work</h1>
+            <h1 id="work-title">Team tasks</h1>
             <p className="heading-copy">
-              Everything active, with the work needing attention surfaced first.
+              See ownership, timing, and next steps across the team.
             </p>
           </div>
           <div className="view-switcher" aria-label="Current view">
             <span className="view-dot" />
-            {statusFilterLabels[query.status]}
+            <span className="view-copy">
+              <small>Current view</small>
+              <strong>{statusFilterLabels[query.status]}</strong>
+            </span>
             <span className="view-count">
               {query.status === 'active' ? activeTasks.length : total}
             </span>
           </div>
         </section>
 
-        <section className="attention-grid" aria-label="Attention summary">
-          <button
-            className={`attention-card urgent ${query.attention === 'urgent' ? 'is-selected' : ''}`}
-            type="button"
-            aria-pressed={query.attention === 'urgent'}
-            onClick={() => setAttention('urgent')}
-          >
-            <span className="attention-icon"><AlertTriangle /></span>
-            <span>
-              <strong>{attentionCounts.urgent}</strong>
-              <small>Urgent</small>
-            </span>
-            <span className="attention-caption">Needs a decision</span>
-          </button>
-          <button
-            className={`attention-card overdue ${query.attention === 'overdue' ? 'is-selected' : ''}`}
-            type="button"
-            aria-pressed={query.attention === 'overdue'}
-            onClick={() => setAttention('overdue')}
-          >
-            <span className="attention-icon"><CalendarDays /></span>
-            <span>
-              <strong>{attentionCounts.overdue}</strong>
-              <small>Overdue</small>
-            </span>
-            <span className="attention-caption">Past due date</span>
-          </button>
-          <button
-            className={`attention-card unassigned ${query.attention === 'unassigned' ? 'is-selected' : ''}`}
-            type="button"
-            aria-pressed={query.attention === 'unassigned'}
-            onClick={() => setAttention('unassigned')}
-          >
-            <span className="attention-icon"><UserRound /></span>
-            <span>
-              <strong>{attentionCounts.unassigned}</strong>
-              <small>Unassigned</small>
-            </span>
-            <span className="attention-caption">Needs an owner</span>
-          </button>
+        <section className="attention-section" aria-labelledby="attention-title">
+          <div className="attention-heading">
+            <h2 id="attention-title">Quick filters</h2>
+            <p>Jump to work that needs action. Counts can overlap.</p>
+          </div>
+          <div className="attention-grid">
+            <button
+              className={`attention-card urgent ${query.attention === 'urgent' ? 'is-selected' : ''}`}
+              type="button"
+              aria-pressed={query.attention === 'urgent'}
+              onClick={() => setAttention('urgent')}
+            >
+              <span className="attention-icon"><AlertTriangle /></span>
+              <span className="attention-copy">
+                <span className="attention-value">
+                  <strong>{attentionCounts.urgent}</strong>
+                  <span>Urgent</span>
+                </span>
+                <small>Needs a decision</small>
+              </span>
+              <span className="attention-action" aria-hidden="true">
+                {query.attention === 'urgent' ? 'Selected' : 'View'}
+                <ArrowRight />
+              </span>
+            </button>
+            <button
+              className={`attention-card overdue ${query.attention === 'overdue' ? 'is-selected' : ''}`}
+              type="button"
+              aria-pressed={query.attention === 'overdue'}
+              onClick={() => setAttention('overdue')}
+            >
+              <span className="attention-icon"><CalendarDays /></span>
+              <span className="attention-copy">
+                <span className="attention-value">
+                  <strong>{attentionCounts.overdue}</strong>
+                  <span>Overdue</span>
+                </span>
+                <small>Past due date</small>
+              </span>
+              <span className="attention-action" aria-hidden="true">
+                {query.attention === 'overdue' ? 'Selected' : 'View'}
+                <ArrowRight />
+              </span>
+            </button>
+            <button
+              className={`attention-card unassigned ${query.attention === 'unassigned' ? 'is-selected' : ''}`}
+              type="button"
+              aria-pressed={query.attention === 'unassigned'}
+              onClick={() => setAttention('unassigned')}
+            >
+              <span className="attention-icon"><UserRound /></span>
+              <span className="attention-copy">
+                <span className="attention-value">
+                  <strong>{attentionCounts.unassigned}</strong>
+                  <span>Unassigned</span>
+                </span>
+                <small>Needs an owner</small>
+              </span>
+              <span className="attention-action" aria-hidden="true">
+                {query.attention === 'unassigned' ? 'Selected' : 'View'}
+                <ArrowRight />
+              </span>
+            </button>
+          </div>
         </section>
 
         <section className="task-surface" aria-labelledby="tasks-title">
@@ -364,7 +392,12 @@ export default function Home() {
               <p aria-live="polite">
                 {displayedDemo === 'loading'
                   ? 'Loading tasks…'
-                  : `${total} task${total === 1 ? '' : 's'} · sorted by ${query.sort === 'attention' ? 'attention' : query.sort === 'due' ? 'due date' : 'recent update'}`}
+                  : (
+                    <>
+                      <span className="result-total">{total} task{total === 1 ? '' : 's'}</span>
+                      <span className="result-sort"> · sorted by {query.sort === 'attention' ? 'attention' : query.sort === 'due' ? 'due date' : 'recent update'}</span>
+                    </>
+                  )}
               </p>
             </div>
             <div className="toolbar-controls">
@@ -388,7 +421,7 @@ export default function Home() {
                       commitQuery({ ...query, q: '', page: 1 }, 'replace');
                     }
                   }}
-                  placeholder="Search tasks or owners"
+                  placeholder="Search title, ID, or owner"
                 />
                 {query.q ? (
                   <button
@@ -413,7 +446,8 @@ export default function Home() {
                 onClick={() => setFilterOpen(true)}
               >
                 <Filter data-icon="inline-start" />
-                Filter
+                <span className="filter-label-wide">Filters</span>
+                <span className="filter-label-compact">Filter &amp; sort</span>
                 {activeFilterCount ? (
                   <span className="filter-count">{activeFilterCount}</span>
                 ) : null}
@@ -433,9 +467,9 @@ export default function Home() {
                   );
                 }}
               >
-                <NativeSelectOption value="attention">Needs attention</NativeSelectOption>
-                <NativeSelectOption value="due">Due date</NativeSelectOption>
-                <NativeSelectOption value="updated">Recently updated</NativeSelectOption>
+                <NativeSelectOption value="attention">Sort: attention</NativeSelectOption>
+                <NativeSelectOption value="due">Sort: due date</NativeSelectOption>
+                <NativeSelectOption value="updated">Sort: updated</NativeSelectOption>
               </NativeSelect>
               <Button
                 className="share-button"
@@ -444,7 +478,7 @@ export default function Home() {
                 onClick={shareView}
               >
                 <Share2 data-icon="inline-start" />
-                <span>Share view</span>
+                <span>Copy view</span>
               </Button>
             </div>
           </div>

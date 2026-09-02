@@ -2,8 +2,6 @@
 
 Relay is a focused team work list for answering three questions quickly: **what is active, what needs attention, and who owns it?** It deliberately optimizes for scanning, finding, and moving work rather than trying to be a full project-management suite.
 
-**Hosted preview (project access required):** [relay-task-workspace-2026.swop-id.chatgpt.site](https://relay-task-workspace-2026.swop-id.chatgpt.site)
-
 ## Screenshots
 
 The same default Active view is shown at the three assessment widths.
@@ -97,7 +95,7 @@ Urgency stays attached to the title instead of consuming another column. Descrip
 
 ### Mobile adaptation
 
-- At **768px**, each row becomes a compact two-line layout: title and stage retain priority while due information sits with ownership.
+- At **768px**, each row becomes a labeled task card with a full-width title followed by a stable Stage, Owner, and Due scan path.
 - At **375px**, rows become semantic task cards rather than a squeezed or scrolling table.
 - Search remains immediately available.
 - One thumb-sized Filter button opens a bottom sheet containing stage, owner, attention, and sort controls.

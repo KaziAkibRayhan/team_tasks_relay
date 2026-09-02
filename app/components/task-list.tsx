@@ -2,6 +2,7 @@
 
 import {
   AlertCircle,
+  ArrowUpRight,
   CalendarDays,
   Inbox,
   ListFilter,
@@ -83,18 +84,16 @@ function TaskRow({
   return (
     <li className="task-row">
       <div className="task-title-cell">
-        <span
-          className={`task-signal ${task.urgent ? 'is-urgent' : ''}`}
-          aria-hidden="true"
-        />
         <div>
           <div className="task-title-line">
             <button
               className="task-open-button"
               type="button"
+              title={task.title}
               onClick={() => onOpenTask(task)}
             >
-              {task.title}
+              <span className="task-open-text">{task.title}</span>
+              <ArrowUpRight className="task-open-icon" aria-hidden="true" />
             </button>
             {task.urgent ? <span className="urgent-badge">Urgent</span> : null}
           </div>
@@ -104,57 +103,64 @@ function TaskRow({
 
       <div className="task-status-cell">
         <span className="cell-label">Stage</span>
-        <span className={`status-indicator status-${task.status}`} aria-hidden="true" />
-        <NativeSelect
-          className="quick-status-select"
-          size="sm"
-          value={task.status}
-          aria-label={`Move ${task.id} to another stage`}
-          onChange={(event) => {
-            const control = event.currentTarget;
-            const row = control.closest('li');
-            const siblingRows = row?.parentElement
-              ? Array.from(row.parentElement.children)
-              : [];
-            const rowIndex = row ? siblingRows.indexOf(row) : -1;
-            const fallbackRow =
-              siblingRows[rowIndex + 1] ?? siblingRows[rowIndex - 1];
-            const fallbackControl = fallbackRow?.querySelector('select');
+        <div className="task-cell-value">
+          <span className={`status-indicator status-${task.status}`} aria-hidden="true" />
+          <NativeSelect
+            className={`quick-status-select quick-status-${task.status}`}
+            size="sm"
+            value={task.status}
+            aria-label={`Move ${task.id} to another stage`}
+            onChange={(event) => {
+              const control = event.currentTarget;
+              const row = control.closest('li');
+              // The row may leave a filtered view after this update, so keep focus nearby.
+              const siblingRows = row?.parentElement
+                ? Array.from(row.parentElement.children)
+                : [];
+              const rowIndex = row ? siblingRows.indexOf(row) : -1;
+              const fallbackRow =
+                siblingRows[rowIndex + 1] ?? siblingRows[rowIndex - 1];
+              const fallbackControl = fallbackRow?.querySelector('select');
 
-            onStatusChange(task, event.target.value as TaskStatus);
-            window.requestAnimationFrame(() => {
-              if (!document.contains(control)) {
-                if (fallbackControl && document.contains(fallbackControl)) {
-                  fallbackControl.focus();
-                } else {
-                  document.getElementById('tasks-title')?.focus();
+              onStatusChange(task, event.target.value as TaskStatus);
+              window.requestAnimationFrame(() => {
+                if (!document.contains(control)) {
+                  if (fallbackControl && document.contains(fallbackControl)) {
+                    fallbackControl.focus();
+                  } else {
+                    document.getElementById('tasks-title')?.focus();
+                  }
                 }
-              }
-            });
-          }}
-        >
-          {STATUSES.map((value) => (
-            <NativeSelectOption key={value} value={value}>
-              {STATUS_LABELS[value]}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+              });
+            }}
+          >
+            {STATUSES.map((value) => (
+              <NativeSelectOption key={value} value={value}>
+                {STATUS_LABELS[value]}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </div>
       </div>
 
       <div className={`task-owner-cell ${owner ? '' : 'missing'}`}>
         <span className="cell-label">Owner</span>
-        {owner ? (
-          <span className="mini-avatar" aria-hidden="true">{owner.initials}</span>
-        ) : (
-          <UserRound aria-hidden="true" />
-        )}
-        <span>{owner?.name ?? 'Unassigned'}</span>
+        <div className="task-cell-value">
+          {owner ? (
+            <span className="mini-avatar" aria-hidden="true">{owner.initials}</span>
+          ) : (
+            <UserRound aria-hidden="true" />
+          )}
+          <span>{owner?.name ?? 'Unassigned'}</span>
+        </div>
       </div>
 
       <div className={`task-due-cell ${due.tone}`}>
         <span className="cell-label">Due</span>
-        <CalendarDays aria-hidden="true" />
-        <span>{due.label}</span>
+        <div className="task-cell-value">
+          <CalendarDays aria-hidden="true" />
+          <span>{due.label}</span>
+        </div>
       </div>
     </li>
   );
@@ -172,7 +178,6 @@ function LoadingRows() {
       {Array.from({ length: 6 }, (_, index) => (
         <div className="task-row skeleton-row" key={index}>
           <div className="skeleton-title">
-            <Skeleton className="skeleton-dot" />
             <div>
               <Skeleton className="skeleton-line wide" />
               <Skeleton className="skeleton-line short" />
