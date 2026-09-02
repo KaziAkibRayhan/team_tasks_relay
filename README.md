@@ -19,7 +19,7 @@ Requirements:
 
 ```bash
 git clone <repository-url>
-cd relay-team-task-system
+cd team_tasks_relay
 npm ci
 npm run dev
 ```
