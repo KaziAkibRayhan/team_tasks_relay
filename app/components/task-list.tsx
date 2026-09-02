@@ -10,18 +10,13 @@ import {
   UserRound,
 } from 'lucide-react';
 
+import { TaskStatusSelect } from '@/app/components/task-status-select';
 import { Button } from '@/components/ui/button';
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '@/components/ui/native-select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   dayDifference,
   memberFor,
   parseDateOnly,
-  STATUS_LABELS,
-  STATUSES,
   type Task,
   type TaskStatus,
 } from '@/lib/task-data';
@@ -104,42 +99,7 @@ function TaskRow({
       <div className="task-status-cell">
         <span className="cell-label">Stage</span>
         <div className="task-cell-value">
-          <span className={`status-indicator status-${task.status}`} aria-hidden="true" />
-          <NativeSelect
-            className={`quick-status-select quick-status-${task.status}`}
-            size="sm"
-            value={task.status}
-            aria-label={`Move ${task.id} to another stage`}
-            onChange={(event) => {
-              const control = event.currentTarget;
-              const row = control.closest('li');
-              // The row may leave a filtered view after this update, so keep focus nearby.
-              const siblingRows = row?.parentElement
-                ? Array.from(row.parentElement.children)
-                : [];
-              const rowIndex = row ? siblingRows.indexOf(row) : -1;
-              const fallbackRow =
-                siblingRows[rowIndex + 1] ?? siblingRows[rowIndex - 1];
-              const fallbackControl = fallbackRow?.querySelector('select');
-
-              onStatusChange(task, event.target.value as TaskStatus);
-              window.requestAnimationFrame(() => {
-                if (!document.contains(control)) {
-                  if (fallbackControl && document.contains(fallbackControl)) {
-                    fallbackControl.focus();
-                  } else {
-                    document.getElementById('tasks-title')?.focus();
-                  }
-                }
-              });
-            }}
-          >
-            {STATUSES.map((value) => (
-              <NativeSelectOption key={value} value={value}>
-                {STATUS_LABELS[value]}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <TaskStatusSelect task={task} onStatusChange={onStatusChange} />
         </div>
       </div>
 
